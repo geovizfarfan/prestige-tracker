@@ -1,0 +1,16 @@
+{
+  "name": "prestige-tracker",
+  "version": "1.0.0",
+  "description": "Team-based scorekeeping Discord bot",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "deploy": "node src/deploy-commands.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "pg": "^8.11.3",
+    "dotenv": "^16.4.1"
+  }
+}
