@@ -1,5 +1,21 @@
-const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
+const {
+  SlashCommandBuilder,
+  PermissionFlagsBits,
+  ChannelType,
+  MessageFlags,
+} = require('discord.js');
 const db = require('../../db/database');
+
+const GAME_CONFIG = {
+  hangry: {
+    label: 'Hangry Games',
+    key: 'hangry_channels',
+  },
+  'rumble-royale': {
+    label: 'Rumble Royale',
+    key: 'rumble_royale_channels',
+  },
+};
 
 async function addChannelToConfig(guildId, key, channelId) {
   const stored = await db.getGuildConfig(guildId, key);
@@ -16,7 +32,6 @@ async function addChannelToConfig(guildId, key, channelId) {
 
   if (!channels.includes(channelId)) channels.push(channelId);
   await db.setGuildConfig(guildId, key, JSON.stringify(channels));
-  return channels;
 }
 
 module.exports = {
@@ -27,7 +42,27 @@ module.exports = {
     .addSubcommand(subcommand =>
       subcommand
         .setName('game-channel')
-        .setDescription('Register this channel for automatic game tracking')
+        .setDescription('Choose which game channel Orbit Tracker should monitor')
+        .addStringOption(option =>
+          option
+            .setName('game')
+            .setDescription('Game to track in this channel')
+            .setRequired(true)
+            .addChoices(
+              { name: 'Hangry Games', value: 'hangry' },
+              { name: 'Rumble Royale', value: 'rumble-royale' },
+            )
+        )
+        .addChannelOption(option =>
+          option
+            .setName('channel')
+            .setDescription('Channel where the selected game is played')
+            .setRequired(true)
+            .addChannelTypes(
+              ChannelType.GuildText,
+              ChannelType.GuildAnnouncement,
+            )
+        )
     ),
 
   async execute(interaction) {
@@ -39,19 +74,25 @@ module.exports = {
       return;
     }
 
-    const subcommand = interaction.options.getSubcommand();
+    if (interaction.options.getSubcommand() !== 'game-channel') return;
 
-    if (subcommand === 'game-channel') {
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    const game = interaction.options.getString('game', true);
+    const channel = interaction.options.getChannel('channel', true);
+    const config = GAME_CONFIG[game];
 
-      await Promise.all([
-        addChannelToConfig(interaction.guildId, 'hangry_channels', interaction.channelId),
-        addChannelToConfig(interaction.guildId, 'rumble_royale_channels', interaction.channelId),
-      ]);
-
-      await interaction.editReply(
-        `✅ <#${interaction.channelId}> is now registered for **Hangry Games** and **Rumble Royale** tracking.`
-      );
+    if (!config) {
+      await interaction.reply({
+        content: '❌ That game is not supported.',
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
     }
+
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    await addChannelToConfig(interaction.guildId, config.key, channel.id);
+
+    await interaction.editReply(
+      `✅ <#${channel.id}> is now registered for **${config.label}** tracking.`
+    );
   },
 };
