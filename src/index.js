@@ -32,6 +32,13 @@ function loadCommandFiles(dir) {
       for (const cmd of commands) {
         if (cmd.data && cmd.execute) {
           client.commands.set(cmd.data.name, cmd);
+        } else {
+          console.warn('[Command Skipped]', {
+            file: fullPath,
+            commandName: cmd?.data?.name || 'unknown',
+            hasData: Boolean(cmd?.data),
+            hasExecute: typeof cmd?.execute === 'function',
+          });
         }
       }
     }
