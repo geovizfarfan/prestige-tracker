@@ -7,8 +7,8 @@ const {
 const db = require('../../db/database');
 
 const GAME_CONFIG = {
-  'hunger-games': {
-    label: 'Hunger Games',
+  'hangry-games': {
+    label: 'Hangry Games',
     key: 'hangry_channels',
   },
   'rumble-royale': {
@@ -18,10 +18,6 @@ const GAME_CONFIG = {
   'rumble-slaughter': {
     label: 'Rumble Slaughter',
     key: 'rumble_slaughter_channels',
-  },
-  'regret-games': {
-    label: 'Regret Games',
-    key: 'regret_games_channels',
   },
 };
 
@@ -57,10 +53,9 @@ module.exports = {
             .setDescription('Game to track in this channel')
             .setRequired(true)
             .addChoices(
-              { name: 'Hunger Games', value: 'hunger-games' },
+              { name: 'Hangry Games', value: 'hangry-games' },
               { name: 'Rumble Royale', value: 'rumble-royale' },
               { name: 'Rumble Slaughter', value: 'rumble-slaughter' },
-              { name: 'Regret Games', value: 'regret-games' },
             )
         )
         .addChannelOption(option =>
