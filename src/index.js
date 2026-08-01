@@ -57,6 +57,14 @@ client.once(Events.ClientReady, async () => {
 });
 
 client.on(Events.InteractionCreate, async interaction => {
+  const interactionName = interaction.commandName || interaction.customId || 'unknown';
+  console.log('[Interaction Received]', {
+    type: interaction.type,
+    name: interactionName,
+    guildId: interaction.guildId,
+    userId: interaction.user?.id,
+  });
+
   try {
     if (interaction.isAutocomplete()) {
       const command = client.commands.get(interaction.commandName);
@@ -65,8 +73,17 @@ client.on(Events.InteractionCreate, async interaction => {
     }
     if (interaction.isChatInputCommand()) {
       const command = client.commands.get(interaction.commandName);
-      if (!command) return;
+      if (!command) {
+        console.error(`[Command Not Loaded] /${interaction.commandName}`);
+        await interaction.reply({
+          content: '❌ This command is registered in Discord but is not loaded by the bot. Please ask the bot owner to refresh the commands.',
+          ephemeral: true,
+        });
+        return;
+      }
+      console.log(`[Command Start] /${interaction.commandName}`);
       await command.execute(interaction);
+      console.log(`[Command Complete] /${interaction.commandName}`);
     } else if (interaction.isButton()) {
       if (interaction.customId.startsWith('bounty_')) {
         await handleBountyButton(interaction);
@@ -79,12 +96,14 @@ client.on(Events.InteractionCreate, async interaction => {
       }
     }
   } catch (err) {
-    console.error(`[Interaction Error] ${err.message}`, err);
+    console.error(`[Interaction Error] ${interactionName}`, err);
     const reply = { content: '❌ An error occurred. Please try again.', ephemeral: true };
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp(reply).catch(() => {});
+    if (interaction.deferred) {
+      await interaction.editReply(reply).catch(replyErr => console.error('[Error Reply Failed]', replyErr));
+    } else if (interaction.replied) {
+      await interaction.followUp(reply).catch(replyErr => console.error('[Follow-up Failed]', replyErr));
     } else {
-      await interaction.reply(reply).catch(() => {});
+      await interaction.reply(reply).catch(replyErr => console.error('[Initial Reply Failed]', replyErr));
     }
   }
 });
@@ -94,6 +113,14 @@ client.on('messageCreate', async message => {
   catch (err) { console.error('[Hangry Games]', err.message); }
   try { await handleRumbleRoyaleMessage(message); }
   catch (err) { console.error('[Rumble Royale]', err.message); }
+});
+
+process.on('unhandledRejection', err => {
+  console.error('[Unhandled Rejection]', err);
+});
+
+process.on('uncaughtException', err => {
+  console.error('[Uncaught Exception]', err);
 });
 
 console.log('Logging in to Discord...');
