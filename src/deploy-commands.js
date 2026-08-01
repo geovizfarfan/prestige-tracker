@@ -4,7 +4,7 @@ const { REST, Routes } = require('discord.js');
 const path = require('path');
 const fs = require('fs');
 
-const commands = [];
+const commandMap = new Map();
 
 function loadCommands(dir) {
   const files = fs.readdirSync(dir, { withFileTypes: true });
@@ -16,13 +16,20 @@ function loadCommands(dir) {
       const mod = require(fullPath);
       const items = Array.isArray(mod) ? mod : [mod];
       for (const item of items) {
-        if (item.data) commands.push(item.data.toJSON());
+        if (item.data) {
+          const command = item.data.toJSON();
+          if (commandMap.has(command.name)) {
+            console.warn(`[Duplicate Command] /${command.name} — using definition from ${fullPath}`);
+          }
+          commandMap.set(command.name, command);
+        }
       }
     }
   }
 }
 
 loadCommands(path.join(__dirname, 'commands'));
+const commands = [...commandMap.values()];
 
 const rest = new REST().setToken(process.env.DISCORD_TOKEN);
 
