@@ -6,6 +6,7 @@ const fs = require('fs');
 const { handleButton } = require('./interactions/buttonHandler');
 const { handlePixxieBotMessage } = require('./games/hangryGamesHandler');
 const { handleRumbleRoyaleMessage } = require('./games/rumbleRoyaleGameHandler');
+const { handleRumbleSlaughterMessage } = require('./games/rumbleSlaughterGameHandler');
 const { handleBountyButton, handleBountyModal } = require('./interactions/bountyButtonHandler');
 const db = require('./db/database');
 const { updateScoreboard } = require('./utils/scoreboardUpdater');
@@ -120,6 +121,8 @@ client.on('messageCreate', async message => {
   catch (err) { console.error('[Hangry Games]', err.message); }
   try { await handleRumbleRoyaleMessage(message); }
   catch (err) { console.error('[Rumble Royale]', err.message); }
+  try { await handleRumbleSlaughterMessage(message); }
+  catch (err) { console.error('[Rumble Slaughter]', err.message); }
 });
 
 process.on('unhandledRejection', err => {
