@@ -132,7 +132,12 @@ async function handlePixxieBotMessage(message) {
   }
 
   // ── Game start ──────────────────────────────────────────────────────────
-  if ((fullText.includes("has started THE BOARD PRINCESS's") || fullText.includes('The Battle Begins')) && fullText.includes('tributes')) {
+  const isGameStart =
+    (fullText.includes('The Battle Begins') && (fullText.includes('tributes') || fullText.includes('Hangry Games'))) ||
+    (fullText.includes('Part 2') && fullText.includes('Battle')) ||
+    (fullText.includes('tributes') && fullText.includes('Hangry Games')) ||
+    (fullText.includes('has started') && fullText.includes('Hangry Games'));
+  if (isGameStart) {
     const { gameNumber, totalPlayers } = tracker.parseGameStart(fullText);
 
     // Check if admin manually started tracking via /hangry-start
