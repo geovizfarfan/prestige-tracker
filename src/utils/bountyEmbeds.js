@@ -46,7 +46,7 @@ function buildBountyListEmbed(session, bounties, page, claimChannelId) {
     const payeeStr = b.payee_id ? `<@${b.payee_id}>` : b.payee_username;
     const target = formatTarget(b);
     return [
-      `**#${b.id} — ${TYPE_BADGES[b.type] || b.type}** ${typeLabel}`,
+      `**#${b.id} — ${typeLabel}**`,
       `${E.gift} ${b.prize}  ${target ? `${E.target} ${target}  ` : ''}${E.payout} ${payeeStr}`,
     ].join('\n');
   }).join('\n\n');
@@ -84,7 +84,7 @@ function buildPayoutTrackerEmbed(session, bounties, gameNumber) {
     }
 
     return [
-      `**#${b.id} — ${TYPE_BADGES[b.type] || b.type}** ${typeLabel}`,
+      `**#${b.id} — ${typeLabel}**`,
       `${E.gift} ${b.prize}  →  winner: **${winnerStr}**  ${E.payout} ${payeeStr}`,
       statusLine,
     ].join('\n');
@@ -116,7 +116,7 @@ function buildReviewEmbed(bounty, session) {
     .setColor(0xFEE75C)
     .setTitle('🔍  New Bounty — Pending Approval')
     .setDescription(
-      `**#${bounty.id} — ${TYPE_BADGES[bounty.type] || bounty.type}** ${typeLabel}\n` +
+      `**#${bounty.id} — ${typeLabel}**\n` +
       `**Game:** ${session.name}\n` +
       `${E.gift} **Prize:** ${bounty.prize}\n` +
       (target ? `${E.target} **Target:** ${target}\n` : '') +

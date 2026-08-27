@@ -32,6 +32,7 @@ module.exports = {
   },
 
   async execute(interaction) {
+    await interaction.deferReply({ ephemeral: true });
     const guildId = interaction.guildId;
     const sessionId = parseInt(interaction.options.getString('session'));
     const type = interaction.options.getString('type');
@@ -42,14 +43,14 @@ module.exports = {
 
     const session = await db.getBountySessionById(sessionId);
     if (!session || session.status !== 'active') {
-      return interaction.reply({ content: '❌ That game session is no longer active.', ephemeral: true });
+      return interaction.editReply({ content: '❌ That game session is no longer active.', ephemeral: true });
     }
 
     if ((type === 'kill' || type === 'avenge') && !target) {
-      return interaction.reply({ content: `❌ You must specify a \`target\` for ${type} bounties.`, ephemeral: true });
+      return interaction.editReply({ content: `❌ You must specify a \`target\` for ${type} bounties.`, ephemeral: true });
     }
     if ((type === 'death' || type === 'suicide') && !deathNumber) {
-      return interaction.reply({ content: `❌ You must specify \`death_number\` for ${type} bounties.`, ephemeral: true });
+      return interaction.editReply({ content: `❌ You must specify \`death_number\` for ${type} bounties.`, ephemeral: true });
     }
 
     const bounty = await db.addBounty({
@@ -63,6 +64,32 @@ module.exports = {
       set_by_id: interaction.user.id, set_by_username: interaction.user.username,
       game_link: session.game_link || null,
     });
+    // Admin/score role bypass - skip review
+    const { isAdmin } = require('../../utils/permissions');
+    const permRoles = await db.getPermRoles('score').catch(() => []);
+    const memberRoleIds = interaction.member?.roles?.cache ? [...interaction.member.roles.cache.keys()] : [];
+    const hasPermRole = permRoles.some(id => memberRoleIds.includes(id));
+    const canBypass = isAdmin(interaction) || hasPermRole;
+
+    if (canBypass) {
+      await db.approveBounty(bounty.id, interaction.user.id, interaction.user.username);
+      // Refresh bounty board
+      try {
+        const { buildBountyBoardEmbed } = require('../../utils/bountyBoard');
+        const boardData = await db.getGuildConfig(guildId, `bounty_board_msg_${session.id}`).catch(() => null);
+        if (boardData) {
+          const { channelId: bChId, messageId: bMsgId } = JSON.parse(boardData);
+          const bCh = await interaction.client.channels.fetch(bChId).catch(() => null);
+          const bMsg = bCh ? await bCh.messages.fetch(bMsgId).catch(() => null) : null;
+          if (bMsg) {
+            const allBounties = await db.getAllSessionBounties(session.id).catch(() => []);
+            await bMsg.edit({ embeds: [buildBountyBoardEmbed(session, allBounties, interaction.guild?.name)] });
+          }
+        }
+      } catch(e) { console.error('[bypass board]', e.message); }
+      return interaction.editReply({ embeds: [new EmbedBuilder().setColor(LAVENDER).setDescription(`${E.sparkle} Bounty **#${bounty.id}** is now live!`)], ephemeral: true });
+    }
+
 
     // Send to review channel
     const reviewChannelId = await db.getGuildConfig(guildId, 'bounty_review_channel');
@@ -81,6 +108,6 @@ module.exports = {
       .setDescription(`${E.sparkle} Bounty **#${bounty.id}** submitted! Staff will review it shortly.` +
         (!reviewChannelId ? '\n⚠️ No review channel set — ask an admin to run `/bounty-setup`' : ''));
 
-    await interaction.reply({ embeds: [confirmEmbed], ephemeral: true });
+    await interaction.editReply({ embeds: [confirmEmbed], ephemeral: true });
   },
 };

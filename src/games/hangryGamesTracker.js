@@ -1,4 +1,4 @@
-const PIXXIEBOT_ID = '675996677366218774';
+const PIXXIEBOT_ID = '1287058848980664362';
 const activeGames = new Map(); // key: channelId
 
 function getGame(channelId) { return activeGames.get(channelId) || null; }

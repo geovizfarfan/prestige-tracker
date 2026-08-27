@@ -104,7 +104,7 @@ async function postPayoutTracker(client, game, session) {
 }
 
 async function handlePixxieBotMessage(message) {
-  if (message.author.id !== tracker.PIXXIEBOT_ID) return;
+// Bot ID check removed - filtering by content patterns only
 
   const client = message.client;
   const channelId = message.channelId;
@@ -114,13 +114,22 @@ async function handlePixxieBotMessage(message) {
   const hangryChannels = await db.getGuildConfig(guildId, 'hangry_channels').catch(() => null);
   if (!hangryChannels) return;
   const channels = JSON.parse(hangryChannels);
+  console.log("[Hangry] registered:", channels, "this:", channelId);
   if (!channels.includes(channelId)) return;
 
   const embedTexts = message.embeds.map(e =>
     [e.title, e.description, ...(e.fields?.map(f => f.value) || [])].filter(Boolean).join('\n')
   ).join('\n');
   const fullText = [message.content, embedTexts].filter(Boolean).join('\n');
-  if (!fullText.trim()) return;
+  console.log("[Hangry] GOT MSG from", message.author.username, "full:", fullText.slice(0,150));
+  if (!fullText.trim()) { 
+    if (message.embeds.length) {
+      const e = message.embeds[0];
+      console.log("[Hangry] RAW EMBED keys:", Object.keys(e.data || e));
+      console.log("[Hangry] RAW EMBED data:", JSON.stringify(e.data || e).slice(0,500));
+    }
+    return; 
+  }
 
   // ── Game start ──────────────────────────────────────────────────────────
   if ((fullText.includes("has started THE BOARD PRINCESS's") || fullText.includes('The Battle Begins')) && fullText.includes('tributes')) {
@@ -150,7 +159,7 @@ async function handlePixxieBotMessage(message) {
   }
 
   // ── Kill event ──────────────────────────────────────────────────────────
-  const hasSword = fullText.includes('⚔') || fullText.includes('✂️') || /^[⚔✂]/.test(fullText.trim());
+  const hasSword = fullText.includes('⚔') || fullText.includes('✂️') || fullText.includes('crossedswords') || fullText.includes(':knife:') || /^[⚔✂]/.test(fullText.trim());
   if (hasSword && !fullText.includes('A half-eaten sandwich')) {
     const lines = fullText.split('\n');
     for (const line of lines) {

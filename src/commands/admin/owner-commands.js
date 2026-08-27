@@ -26,21 +26,7 @@ module.exports = [
       await interaction.reply({ embeds: [errorEmbed('⚠️ **This will permanently delete all data.** Are you sure?')], components: [confirm], ephemeral: true });
     },
   },
-  {
-    data: new SlashCommandBuilder()
-      .setName('scoreboard-post')
-      .setDescription('Post the live scoreboard in this channel'),
-    async execute(interaction) {
-      if (!await requireAdmin(interaction)) return;
-      const session = await db.getActiveSession();
-      if (!session) return interaction.reply({ embeds: [errorEmbed('No active session.')], ephemeral: true });
-      const teams = await db.getTeamsBySession(session.id);
-      const members = await db.getMembersBySession(session.id);
-      const embed = buildScoreboardEmbed(session, teams, members);
-      const msg = await interaction.reply({ embeds: [embed], fetchReply: true });
-      await db.updateSession(session.id, { scoreboard_channel_id: interaction.channelId, scoreboard_message_id: msg.id });
-    },
-  },
+
   {
     data: new SlashCommandBuilder()
       .setName('history')
