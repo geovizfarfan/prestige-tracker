@@ -13,7 +13,7 @@ const DEFAULT_TEAMS = [
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('game-start')
+    .setName('team-start')
     .setDescription('Start a new team game session with signups')
     .addStringOption(o => o.setName('name').setDescription('Session name').setRequired(false))
     .addIntegerOption(o => o.setName('teams').setDescription('Number of teams (2-10)').setMinValue(2).setMaxValue(10).setRequired(false))

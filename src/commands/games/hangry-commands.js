@@ -162,8 +162,8 @@ module.exports = [
 
   {
     data: new SlashCommandBuilder()
-      .setName('hangry-game')
-      .setDescription('Show recap of a specific Hangry Games match')
+      .setName('game-recap')
+      .setDescription('Show recap of a specific Hangry Games match (by game number)')
       .addIntegerOption(o => o.setName('game_number').setDescription('Game number (e.g. 265)').setRequired(true)),
 
     async execute(interaction) {

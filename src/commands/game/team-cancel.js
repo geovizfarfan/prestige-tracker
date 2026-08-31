@@ -5,7 +5,7 @@ const { errorEmbed, successEmbed, buildSignupButtons } = require('../../utils/em
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('game-cancel')
+    .setName('team-cancel')
     .setDescription('Cancel and delete the current session without saving history'),
 
   async execute(interaction) {

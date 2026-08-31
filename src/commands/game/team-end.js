@@ -5,7 +5,7 @@ const { buildWinnerEmbed, errorEmbed, buildSignupButtons } = require('../../util
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('game-end')
+    .setName('team-end')
     .setDescription('End the current game session and display final results'),
 
   async execute(interaction) {

@@ -5,7 +5,7 @@ const { buildTeamSessionEmbed, buildJoinLateButton, errorEmbed } = require('../.
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('post-teams')
+    .setName('team-repost')
     .setDescription('Re-post the Team Sessions embed with the Join Late button'),
 
   async execute(interaction) {
