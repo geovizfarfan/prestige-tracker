@@ -154,8 +154,17 @@ async function handlePixxieBotMessage(message) {
     return;
   }
 
-  const game = tracker.getGame(channelId);
-  if (!game) return;
+  let game = tracker.getGame(channelId);
+  if (!game) {
+    // Auto-start game if hangry-start was run but game start message was missed
+    const activeData = await db.getGuildConfig(guildId, `hangry_active_${channelId}`).catch(() => null);
+    if (!activeData) return;
+    const parsed = JSON.parse(activeData);
+    const { gameNumber, totalPlayers } = tracker.parseGameStart(fullText);
+    game = tracker.startGame(channelId, gameNumber, totalPlayers, guildId, parsed.sessionId, parsed.gameLink);
+    await db.logHangryGame({ channelId, gameNumber, totalPlayers, guildId }).catch(() => {});
+    console.log('[Hangry] Auto-started game from active session:', parsed.sessionId);
+  }
 
   // ── Remaining count ─────────────────────────────────────────────────────
   const remaining = tracker.parseRemaining(fullText);
