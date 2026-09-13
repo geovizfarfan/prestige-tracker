@@ -216,7 +216,11 @@ async function handlePixxieBotMessage(message) {
   }
 
   // ── Game winner ─────────────────────────────────────────────────────────
-  if (fullText.includes('won THE BOARD PRINCESS') && fullText.includes('Hangry Games')) {
+  // Guild-name-agnostic: the old check hardcoded the literal guild name
+  // ("won THE BOARD PRINCESS"), which silently never matched if the guild's
+  // display name uses stylized Unicode instead of plain ASCII letters.
+  const isWinnerMsg = fullText.includes('Winner!') && fullText.includes('Hangry Games');
+  if (isWinnerMsg) {
     const winner = tracker.parseWinner(fullText);
     if (winner) {
       game.winner = winner;
@@ -244,10 +248,23 @@ async function handlePixxieBotMessage(message) {
         await resultsChannel.send({ embeds: [recap] }).catch(() => {});
       }
 
-      // Post payout tracker if there's a linked session
+      // Post payout tracker if there's a linked session, then auto-close it
       if (game.sessionId) {
         const session = await db.getBountySessionById(game.sessionId).catch(() => null);
-        if (session) await postPayoutTracker(client, game, session);
+        if (session) {
+          await postPayoutTracker(client, game, session);
+
+          if (session.status === 'active') {
+            await db.endBountySession(game.sessionId).catch(() => {});
+            const resultsChannel = await getResultsChannel(client, guildId);
+            if (resultsChannel) {
+              const endEmbed = new EmbedBuilder()
+                .setColor(LAVENDER)
+                .setDescription(`${E.sparkle} Bounty session **"${session.name}"** auto-closed — winner detected.`);
+              await resultsChannel.send({ embeds: [endEmbed] }).catch(() => {});
+            }
+          }
+        }
       }
 
       tracker.endGame(channelId);

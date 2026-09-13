@@ -38,7 +38,8 @@ function parseSuicide(text) {
 }
 
 function parseRemaining(text) {
-  const match = text.match(/(\d+)\s+picnic\s+goers?\s+remaining/i);
+  // Theme-agnostic: "11 hangry people remaining!", "2 picnic goers remaining", etc.
+  const match = text.match(/(\d+)[^\d\n]*remaining/i);
   return match ? parseInt(match[1]) : null;
 }
 
@@ -72,9 +73,11 @@ function parseGameStart(text) {
 }
 
 function parseWinner(text) {
-  const match = text.match(/\*\*(.+?)\*\*\s+won\s+THE\s+BOARD\s+PRINCESS/i);
+  // Guild-name-agnostic: don't hardcode "THE BOARD PRINCESS" — the guild's
+  // display name can use stylized Unicode that won't match plain ASCII.
+  const match = text.match(/\*\*(.+?)\*\*\s+won\b/i);
   if (match) return match[1].trim();
-  const italicMatch = text.match(/[🎉🎊]\s+\*(.+?)\*\s+won/i);
+  const italicMatch = text.match(/[🎉🎊]\s+\*(.+?)\*\s+won\b/i);
   return italicMatch ? italicMatch[1].trim() : null;
 }
 
