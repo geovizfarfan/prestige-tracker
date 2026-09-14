@@ -25,6 +25,11 @@ module.exports = [
         return interaction.reply({ content: '❌ Must be a valid Discord message link (right-click the tribute list → Copy Message Link).', ephemeral: true });
       }
 
+      // Defer immediately — everything below is several sequential DB/Discord
+      // round trips before we can reply, which risks Discord's 3s ack window
+      // (same class of bug that hit /setup view).
+      await interaction.deferReply({ ephemeral: true });
+
       const parts = gameLink.split('/');
       const channelId = parts[parts.length - 2];
       const sessionName = interaction.options.getString('name') || `Hangry Games — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
@@ -90,7 +95,7 @@ module.exports = [
         .setFooter({ text: `${interaction.guild?.name} • Orbit Tracker` })
         .setTimestamp();
 
-      await interaction.reply({ ephemeral: true, embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
     },
   },
 

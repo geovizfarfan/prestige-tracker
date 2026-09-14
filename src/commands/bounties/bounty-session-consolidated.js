@@ -54,6 +54,8 @@ module.exports = {
         return interaction.reply({ content: '❌ `game_link` must be a valid Discord message link.', ephemeral: true });
       }
 
+      await interaction.deferReply({ ephemeral: true });
+
       const session = await db.createBountySession({
         guild_id: guildId, name,
         game_channel_id: gameChannel.id,
@@ -84,7 +86,7 @@ module.exports = {
         guildId,
       }));
 
-      return interaction.reply({ ephemeral: true, embeds: [new EmbedBuilder()
+      return interaction.editReply({ embeds: [new EmbedBuilder()
         .setColor(LAVENDER)
         .setTitle(`${E.sparkle}  Bounty Session Started!`)
         .setDescription(

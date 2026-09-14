@@ -170,6 +170,11 @@ module.exports = {
 
     // ── View settings ──────────────────────────────────────────────────────────
     if (sub === 'view') {
+      // Defer immediately — 13+ config keys below each round-trip to Postgres,
+      // and running them sequentially could blow past Discord's 3s ack window,
+      // which is what produced "The application did not respond."
+      await interaction.deferReply({ ephemeral: true });
+
       const keys = [
         ['bounty_review_channel', 'Bounty Review'],
         ['bounty_results_channel', 'Bounty Results'],
@@ -186,10 +191,17 @@ module.exports = {
         ['regretgames_win_points', 'Regret Games Win Points'],
       ];
 
+      // Fetch all config values and perm roles in parallel instead of one
+      // sequential await per key.
+      const [values, scoreRoles] = await Promise.all([
+        Promise.all(keys.map(([key]) => db.getGuildConfig(guildId, key))),
+        db.getPermRoles('score'),
+      ]);
+
       const lines = [];
-      for (const [key, label] of keys) {
-        const val = await db.getGuildConfig(guildId, key);
-        if (!val) continue;
+      keys.forEach(([key, label], i) => {
+        const val = values[i];
+        if (!val) return;
         try {
           const parsed = JSON.parse(val);
           if (Array.isArray(parsed)) lines.push(`**${label}:** ${parsed.map(id => `<#${id}>`).join(', ')}`);
@@ -197,18 +209,17 @@ module.exports = {
         } catch {
           lines.push(`**${label}:** \`${val}\``);
         }
-      }
+      });
 
-      const scoreRoles = await db.getPermRoles('score');
       if (scoreRoles.length) lines.push(`**Score Roles:** ${scoreRoles.map(id => `<@&${id}>`).join(', ')}`);
 
-      return interaction.reply({ embeds: [new EmbedBuilder()
+      return interaction.editReply({ embeds: [new EmbedBuilder()
         .setColor(LAVENDER)
         .setTitle(`${E.sparkle}  Prestige Tracker — Settings`)
         .setDescription(lines.length ? lines.join('\n') : '*No settings configured yet.*')
         .setFooter({ text: 'Use /setup [subcommand] to configure' })
         .setTimestamp()
-      ], ephemeral: true });
+      ] });
     }
   },
 };
