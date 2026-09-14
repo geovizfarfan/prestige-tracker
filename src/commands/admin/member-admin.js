@@ -1,18 +1,39 @@
+// src/commands/admin/member-admin.js
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { requireAdmin } = require('../../utils/permissions');
 const db = require('../../db/database');
-const { successEmbed, errorEmbed, buildMemberInfoEmbed, COLORS } = require('../../utils/embeds');
+const { successEmbed, errorEmbed, buildMemberInfoEmbed, COLORS, RANK_MEDALS } = require('../../utils/embeds');
 const { getSmallestTeam } = require('../../utils/randomizer');
 const { updateScoreboard } = require('../../utils/scoreboardUpdater');
 
-module.exports = [
-  {
-    data: new SlashCommandBuilder()
-      .setName('member-add')
-      .setDescription('Manually add a member to the session')
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('member')
+    .setDescription('Manage session members')
+
+    .addSubcommand(s => s.setName('add').setDescription('[ADMIN] Manually add a member to the session')
       .addUserOption(o => o.setName('user').setDescription('User to add').setRequired(true))
-      .addRoleOption(o => o.setName('team_role').setDescription('Assign to specific team (optional)').setRequired(false)),
-    async execute(interaction) {
+      .addRoleOption(o => o.setName('team_role').setDescription('Assign to specific team (optional)').setRequired(false)))
+
+    .addSubcommand(s => s.setName('remove').setDescription('[ADMIN] Remove a member from the current session')
+      .addUserOption(o => o.setName('user').setDescription('User to remove').setRequired(true)))
+
+    .addSubcommand(s => s.setName('move').setDescription('[ADMIN] Move a member to a different team')
+      .addUserOption(o => o.setName('user').setDescription('User to move').setRequired(true))
+      .addRoleOption(o => o.setName('team_role').setDescription('New team role').setRequired(true)))
+
+    .addSubcommand(s => s.setName('info').setDescription("View a member's team and score")
+      .addUserOption(o => o.setName('user').setDescription('Member to view').setRequired(true)))
+
+    .addSubcommand(s => s.setName('list').setDescription('List all members in the current session'))
+
+    .addSubcommand(s => s.setName('history').setDescription("View a member's score history across all sessions")
+      .addUserOption(o => o.setName('user').setDescription('Member to look up').setRequired(true))),
+
+  async execute(interaction) {
+    const sub = interaction.options.getSubcommand();
+
+    if (sub === 'add') {
       if (!await requireAdmin(interaction)) return;
       const session = await db.getActiveSession();
       if (!session) return interaction.reply({ embeds: [errorEmbed('No active session.')], ephemeral: true });
@@ -35,15 +56,10 @@ module.exports = [
         if (gm) await gm.roles.add(team.role_id).catch(() => {});
       }
       await updateScoreboard(interaction.client);
-      await interaction.reply({ embeds: [successEmbed(`**${target.username}** added to **${team.name}**`)] });
-    },
-  },
-  {
-    data: new SlashCommandBuilder()
-      .setName('member-remove')
-      .setDescription('Remove a member from the current session')
-      .addUserOption(o => o.setName('user').setDescription('User to remove').setRequired(true)),
-    async execute(interaction) {
+      return interaction.reply({ embeds: [successEmbed(`**${target.username}** added to **${team.name}**`)] });
+    }
+
+    if (sub === 'remove') {
       if (!await requireAdmin(interaction)) return;
       const session = await db.getActiveSession();
       if (!session) return interaction.reply({ embeds: [errorEmbed('No active session.')], ephemeral: true });
@@ -55,16 +71,10 @@ module.exports = [
         if (gm) await gm.roles.remove(member.role_id).catch(() => {});
       }
       await updateScoreboard(interaction.client);
-      await interaction.reply({ embeds: [successEmbed(`**${target.username}** removed from the session.`)] });
-    },
-  },
-  {
-    data: new SlashCommandBuilder()
-      .setName('member-move')
-      .setDescription('Move a member to a different team')
-      .addUserOption(o => o.setName('user').setDescription('User to move').setRequired(true))
-      .addRoleOption(o => o.setName('team_role').setDescription('New team role').setRequired(true)),
-    async execute(interaction) {
+      return interaction.reply({ embeds: [successEmbed(`**${target.username}** removed from the session.`)] });
+    }
+
+    if (sub === 'move') {
       if (!await requireAdmin(interaction)) return;
       const session = await db.getActiveSession();
       if (!session) return interaction.reply({ embeds: [errorEmbed('No active session.')], ephemeral: true });
@@ -79,28 +89,19 @@ module.exports = [
       if (gm && newTeam.role_id) await gm.roles.add(newTeam.role_id).catch(() => {});
       await db.moveMember(session.id, target.id, newTeam.id);
       await updateScoreboard(interaction.client);
-      await interaction.reply({ embeds: [successEmbed(`**${target.username}** moved to **${newTeam.name}**`)], ephemeral: true });
-    },
-  },
-  {
-    data: new SlashCommandBuilder()
-      .setName('member-info')
-      .setDescription("View a member's team and score")
-      .addUserOption(o => o.setName('user').setDescription('Member to view').setRequired(true)),
-    async execute(interaction) {
+      return interaction.reply({ embeds: [successEmbed(`**${target.username}** moved to **${newTeam.name}**`)], ephemeral: true });
+    }
+
+    if (sub === 'info') {
       const session = await db.getActiveSession();
       if (!session) return interaction.reply({ embeds: [errorEmbed('No active session.')], ephemeral: true });
       const target = interaction.options.getUser('user');
       const member = await db.getMember(session.id, target.id);
       if (!member) return interaction.reply({ embeds: [errorEmbed(`${target.username} is not in this session.`)], ephemeral: true });
-      await interaction.reply({ embeds: [buildMemberInfoEmbed(member, session)] });
-    },
-  },
-  {
-    data: new SlashCommandBuilder()
-      .setName('member-list')
-      .setDescription('List all members in the current session'),
-    async execute(interaction) {
+      return interaction.reply({ embeds: [buildMemberInfoEmbed(member, session)] });
+    }
+
+    if (sub === 'list') {
       const session = await db.getActiveSession();
       if (!session) return interaction.reply({ embeds: [errorEmbed('No active session.')], ephemeral: true });
       const members = await db.getMembersBySession(session.id);
@@ -120,7 +121,26 @@ module.exports = [
         .setDescription(`**Total players:** \`${members.length}\``)
         .addFields(fields)
         .setTimestamp();
-      await interaction.reply({ embeds: [embed] });
-    },
+      return interaction.reply({ embeds: [embed] });
+    }
+
+    if (sub === 'history') {
+      const target = interaction.options.getUser('user');
+      const history = await db.getMemberHistory(target.id);
+      const lines = history.length > 0
+        ? history.map((h, i) => {
+            const medal = RANK_MEDALS[i] || '<a:completed:1490144466668097668>';
+            const date = h.session_ended ? `<t:${Math.floor(new Date(h.session_ended).getTime() / 1000)}:D>` : 'Unknown';
+            return `${medal} **${h.session_name || 'Unknown Session'}**  ·  ${date}\n> Team: **${h.team_name || 'N/A'}**  ·  Score: \`${h.individual_score} pts\``;
+          }).join('\n\n')
+        : '*No session history found for this member.*';
+      const embed = new EmbedBuilder()
+        .setColor(COLORS.purple)
+        .setTitle(`<:members:1490116112585724034>  ${target.username} — Session History`)
+        .setDescription(lines)
+        .setFooter({ text: 'Prestige Tracker' })
+        .setTimestamp();
+      return interaction.reply({ embeds: [embed] });
+    }
   },
-];
+};

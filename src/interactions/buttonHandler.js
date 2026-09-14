@@ -78,14 +78,14 @@ async function handleButton(interaction) {
     const page = parseInt(parts[parts.length - 2]);
     const sessionId = parseInt(parts[1]);
     if (interaction.user.id !== ownerId) {
-      return interaction.reply({ content: '❌ Run `/bounties` yourself to use these buttons.', ephemeral: true });
+      return interaction.reply({ content: '❌ Run `/bounty list` yourself to use these buttons.', ephemeral: true });
     }
     if (isNaN(page)) return;
     await interaction.deferUpdate();
     const session = await db.getBountySessionById(sessionId);
     if (!session) return;
     const bounties = await db.getBounties(sessionId);
-    const claimChannel = await db.getConfig('claim_channel');
+    const claimChannel = await db.getGuildConfig(interaction.guildId, 'claim_channel');
     const { buildBountyListPage } = require('../utils/buildBountyListPage');
     const { embed, row } = buildBountyListPage(session, bounties, page, ownerId, !!claimChannel);
     return interaction.editReply({ embeds: [embed], components: bounties.length > 10 ? [row] : [] });
