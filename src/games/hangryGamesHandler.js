@@ -151,6 +151,7 @@ async function handlePixxieBotMessage(message) {
 
     tracker.startGame(channelId, gameNumber, totalPlayers, guildId, sessionId, gameLink);
     await db.logHangryGame({ channelId, gameNumber, totalPlayers, guildId }).catch(() => {});
+    console.log('[Hangry] Game tracking started — channel:', channelId, '| session:', sessionId || '(none)', '| players:', totalPlayers);
     return;
   }
 
