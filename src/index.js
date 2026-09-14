@@ -60,6 +60,27 @@ client.once(Events.ClientReady, async () => {
   console.log(`\n✨ Prestige Tracker online as ${client.user.tag}`);
   console.log(`   Commands loaded: ${client.commands.size}`);
   console.log(`   Guilds: ${client.guilds.cache.size}`);
+
+  // One-time self-heal: wipe any leftover GUILD-scoped slash commands.
+  // We deploy global-only (deploy-commands.js), but guild-scoped versions
+  // from earlier testing apparently never got cleared, causing every
+  // command to show twice in Discord's picker for at least one guild.
+  // This is idempotent — a no-op once a guild is already clean — so it's
+  // safe to leave running on every boot rather than a one-off script.
+  try {
+    const { REST, Routes } = require('discord.js');
+    const rest = new REST().setToken(process.env.DISCORD_TOKEN);
+    for (const guild of client.guilds.cache.values()) {
+      const existing = await rest.get(Routes.applicationGuildCommands(process.env.CLIENT_ID, guild.id));
+      if (existing.length) {
+        console.log(`[Startup Cleanup] Clearing ${existing.length} guild-scoped command(s) in ${guild.name} (${guild.id}): ${existing.map(c => '/' + c.name).join(', ')}`);
+        await rest.put(Routes.applicationGuildCommands(process.env.CLIENT_ID, guild.id), { body: [] });
+      }
+    }
+  } catch (err) {
+    console.error('[Startup Cleanup] Failed to clear guild commands:', err.message);
+  }
+
   // Refresh scoreboard every 2 minutes as fallback
   setInterval(() => updateScoreboard(client), 2 * 60 * 1000);
 });
