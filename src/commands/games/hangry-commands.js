@@ -90,7 +90,7 @@ module.exports = [
         .setFooter({ text: `${interaction.guild?.name} • Orbit Tracker` })
         .setTimestamp();
 
-      await interaction.reply({ embeds: [embed] });
+      await interaction.reply({ ephemeral: true, embeds: [embed] });
     },
   },
 

@@ -63,7 +63,28 @@ module.exports = {
         created_by_username: interaction.user.username,
       });
 
-      return interaction.reply({ embeds: [new EmbedBuilder()
+      // Wire this session into the live PixxieBot tracker — mirrors what
+      // /hangry-start does. Without this, the tracker never learns a
+      // session exists, so kills/winner never auto-resolve bounties or
+      // auto-close the session.
+      const parts = gameLink.split('/');
+      const gameChannelIdFromLink = parts[parts.length - 2];
+
+      const hangryChannels = await db.getGuildConfig(guildId, 'hangry_channels').catch(() => null);
+      const channels = hangryChannels ? JSON.parse(hangryChannels) : [];
+      if (!channels.includes(gameChannelIdFromLink)) {
+        channels.push(gameChannelIdFromLink);
+        await db.setGuildConfig(guildId, 'hangry_channels', JSON.stringify(channels));
+      }
+
+      await db.setGuildConfig(guildId, `hangry_active_${gameChannelIdFromLink}`, JSON.stringify({
+        gameLink, channelId: gameChannelIdFromLink,
+        sessionId: String(session.id),
+        startedAt: new Date().toISOString(),
+        guildId,
+      }));
+
+      return interaction.reply({ ephemeral: true, embeds: [new EmbedBuilder()
         .setColor(LAVENDER)
         .setTitle(`${E.sparkle}  Bounty Session Started!`)
         .setDescription(

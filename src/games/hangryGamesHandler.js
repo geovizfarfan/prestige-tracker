@@ -249,13 +249,16 @@ async function handlePixxieBotMessage(message) {
       }
 
       // Post payout tracker if there's a linked session, then auto-close it
+      console.log('[Hangry] Winner block — game.sessionId:', game.sessionId);
       if (game.sessionId) {
-        const session = await db.getBountySessionById(game.sessionId).catch(() => null);
+        const session = await db.getBountySessionById(game.sessionId).catch(e => { console.log('[Hangry] getBountySessionById error:', e.message); return null; });
+        console.log('[Hangry] Fetched session:', session ? { id: session.id, status: session.status } : null);
         if (session) {
           await postPayoutTracker(client, game, session);
 
           if (session.status === 'active') {
-            await db.endBountySession(game.sessionId).catch(() => {});
+            await db.endBountySession(game.sessionId).catch(e => console.log('[Hangry] endBountySession error:', e.message));
+            console.log('[Hangry] Session', game.sessionId, 'auto-closed.');
             const resultsChannel = await getResultsChannel(client, guildId);
             if (resultsChannel) {
               const endEmbed = new EmbedBuilder()
@@ -263,8 +266,12 @@ async function handlePixxieBotMessage(message) {
                 .setDescription(`${E.sparkle} Bounty session **"${session.name}"** auto-closed — winner detected.`);
               await resultsChannel.send({ embeds: [endEmbed] }).catch(() => {});
             }
+          } else {
+            console.log('[Hangry] Session', game.sessionId, 'already had status:', session.status, '— skipping auto-close.');
           }
         }
+      } else {
+        console.log('[Hangry] No sessionId on game — skipping auto-close entirely.');
       }
 
       tracker.endGame(channelId);
