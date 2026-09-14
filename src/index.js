@@ -8,6 +8,7 @@ const { handlePixxieBotMessage } = require('./games/hangryGamesHandler');
 const { handleRumbleRoyaleMessage } = require('./games/rumbleRoyaleGameHandler');
 const { handleRumbleSlaughterMessage } = require('./games/rumbleSlaughterGameHandler');
 const { handleBountyButton, handleBountyModal } = require('./interactions/bountyButtonHandler');
+const { isSetupInteraction, handleSetupInteraction } = require('./interactions/setupPanelHandler');
 const db = require('./db/database');
 const { updateScoreboard } = require('./utils/scoreboardUpdater');
 const client = new Client({
@@ -60,6 +61,22 @@ client.once(Events.ClientReady, async () => {
   console.log(`\n✨ Prestige Tracker online as ${client.user.tag}`);
   console.log(`   Commands loaded: ${client.commands.size}`);
   console.log(`   Guilds: ${client.guilds.cache.size}`);
+
+  // Auto-deploy global slash commands on every boot. Previously this
+  // required a manual `npm run deploy` step separate from the actual
+  // deploy — easy to forget, and it means pushed command changes (like
+  // /setup's structure) silently don't take effect until someone
+  // remembers to run it. Discord's PUT is a full replace, so this is
+  // safe/idempotent to run every boot even when nothing changed.
+  try {
+    const { REST, Routes } = require('discord.js');
+    const rest = new REST().setToken(process.env.DISCORD_TOKEN);
+    const commandsJson = [...client.commands.values()].map(c => c.data.toJSON());
+    await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commandsJson });
+    console.log(`[Startup Deploy] Synced ${commandsJson.length} global slash commands.`);
+  } catch (err) {
+    console.error('[Startup Deploy] Failed to sync global commands:', err.message);
+  }
 
   // One-time self-heal: wipe any leftover GUILD-scoped slash commands.
   // We deploy global-only (deploy-commands.js), but guild-scoped versions
@@ -114,13 +131,21 @@ client.on(Events.InteractionCreate, async interaction => {
       await command.execute(interaction);
       console.log(`[Command Complete] /${interaction.commandName}`);
     } else if (interaction.isButton()) {
-      if (interaction.customId.startsWith('bounty_')) {
+      if (isSetupInteraction(interaction)) {
+        await handleSetupInteraction(interaction);
+      } else if (interaction.customId.startsWith('bounty_')) {
         await handleBountyButton(interaction);
       } else {
         await handleButton(interaction);
       }
+    } else if (interaction.isStringSelectMenu() || interaction.isChannelSelectMenu() || interaction.isRoleSelectMenu()) {
+      if (isSetupInteraction(interaction)) {
+        await handleSetupInteraction(interaction);
+      }
     } else if (interaction.isModalSubmit()) {
-      if (interaction.customId.startsWith('bounty_reject_reason_')) {
+      if (isSetupInteraction(interaction)) {
+        await handleSetupInteraction(interaction);
+      } else if (interaction.customId.startsWith('bounty_reject_reason_')) {
         await handleBountyModal(interaction);
       }
     }
