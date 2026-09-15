@@ -114,14 +114,12 @@ async function handlePixxieBotMessage(message) {
   const hangryChannels = await db.getGuildConfig(guildId, 'hangry_channels').catch(() => null);
   if (!hangryChannels) return;
   const channels = JSON.parse(hangryChannels);
-  console.log("[Hangry] registered:", channels, "this:", channelId);
   if (!channels.includes(channelId)) return;
 
   const embedTexts = message.embeds.map(e =>
     [e.title, e.description, ...(e.fields?.map(f => f.value) || [])].filter(Boolean).join('\n')
   ).join('\n');
   const fullText = [message.content, embedTexts].filter(Boolean).join('\n');
-  console.log("[Hangry] GOT MSG from", message.author.username, "full:", fullText.slice(0,150));
   if (!fullText.trim()) { 
     if (message.embeds.length) {
       const e = message.embeds[0];
